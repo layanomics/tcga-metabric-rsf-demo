@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Survival Forest Demo - Breast Cancer Survival Prediction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button:hover {
+            background-color: #eef2ff;
+        }
+        .tab-button.active {
+            color: #4f46e5;
+            border-bottom: 2px solid #4f46e5;
+            background-color: #eef2ff;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #4f46e5;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-6">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="bg-indigo-600 p-3 rounded-xl">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">Random Survival Forest Demo</h1>
+                    <p class="text-gray-600">Interactive Breast Cancer Survival Prediction Model</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span class="font-semibold text-blue-900">Model Performance</span>
+                    </div>
+                    <p class="text-2xl font-bold text-blue-700">C-index: 0.72</p>
+                    <p class="text-sm text-blue-600">Concordance Index</p>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                        <span class="font-semibold text-green-900">Training Data</span>
+                    </div>
+                    <p class="text-2xl font-bold text-green-700">2,851 patients</p>
+                    <p class="text-sm text-green-600">TCGA + METABRIC</p>
+                </div>
+                
+                <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="font-semibold text-purple-900">Features Used</span>
+                    </div>
+                    <p class="text-2xl font-bold text-purple-700">43 features</p>
+                    <p class="text-sm text-purple-600">Clinical + Pathways</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-t-2xl shadow-lg">
+            <div class="flex border-b">
+                <button onclick="switchTab('demo')" class="tab-button active px-6 py-4 font-semibold" id="tab-demo">
+                    Interactive Demo
+                </button>
+                <button onclick="switchTab('cindex')" class="tab-button px-6 py-4 font-semibold text-gray-600" id="tab-cindex">
+                    What is C-index?
+                </button>
+                <button onclick="switchTab('model')" class="tab-button px-6 py-4 font-semibold text-gray-600" id="tab-model">
+                    How It Works
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="bg-white rounded-b-2xl shadow-xl p-8">
+            <!-- Demo Tab -->
+            <div id="content-demo" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Controls -->
+                    <div class="lg:col-span-1 space-y-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Patient Profile</h3>
+                        
+                        <!-- Age -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Age: <span class="text-indigo-600" id="age-value">55</span> years
+                            </label>
+                            <input type="range" id="age-slider" min="35" max="75" step="10" value="55" 
+                                   class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>35</span>
+                                <span>75</span>
+                            </div>
+                        </div>
+
+                        <!-- Stage -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                Cancer Stage: <span class="text-indigo-600" id="stage-value">Stage 2</span>
+                            </label>
+                            <input type="range" id="stage-slider" min="1" max="4" step="1" value="2" 
+                                   class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>I</span>
+                                <span>II</span>
+                                <span>III</span>
+                                <span>IV</span>
+                            </div>
+                        </div>
+
+                        <!-- ER Status -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">ER Status</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="setER('positive')" id="er-positive" 
+                                        class="er-btn py-3 px-4 rounded-lg font-semibold transition-all bg-indigo-600 text-white shadow-lg">
+                                    ER+
+                                </button>
+                                <button onclick="setER('negative')" id="er-negative" 
+                                        class="er-btn py-3 px-4 rounded-lg font-semibold transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
+                                    ER-
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- PAM50 -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">PAM50 Molecular Subtype</label>
+                            <select id="pam50-select" 
+                                    class="w-full py-3 px-4 rounded-lg border-2 border-gray-300 focus:border-indigo-600 focus:ring focus:ring-indigo-200 transition-all">
+                                <option value="LumA">Luminal A</option>
+                                <option value="LumB">Luminal B</option>
+                                <option value="Basal">Basal-like</option>
+                                <option value="Her2">HER2-enriched</option>
+                            </select>
+                        </div>
+
+                        <!-- Risk Display -->
+                        <div id="risk-display" class="p-6 rounded-xl border-2 bg-green-50 border-green-200 text-green-600">
+                            <div class="text-center">
+                                <p class="text-sm font-semibold mb-2">Risk Score</p>
+                                <p class="text-4xl font-bold mb-2" id="risk-score">293</p>
+                                <p class="text-lg font-semibold" id="risk-category">Low Risk</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visualization -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Predicted Survival Curve</h3>
+                        
+                        <div class="bg-gray-50 p-6 rounded-xl">
+                            <canvas id="survivalChart" width="800" height="400"></canvas>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-200">
+                                <p class="text-sm font-semibold text-indigo-900 mb-1">1 Year</p>
+                                <p class="text-2xl font-bold text-indigo-700" id="surv-1y">99.5%</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-200">
+                                <p class="text-sm font-semibold text-indigo-900 mb-1">3 Year</p>
+                                <p class="text-2xl font-bold text-indigo-700" id="surv-3y">94.3%</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-200">
+                                <p class="text-sm font-semibold text-indigo-900 mb-1">5 Year</p>
+                                <p class="text-2xl font-bold text-indigo-700" id="surv-5y">87.0%</p>
+                            </div>
+                            <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-200">
+                                <p class="text-sm font-semibold text-indigo-900 mb-1">10 Year</p>
+                                <p class="text-2xl font-bold text-indigo-700" id="surv-10y">70.2%</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <h4 class="font-semibold text-blue-900 mb-2">How to interpret this curve:</h4>
+                                    <ul class="text-sm text-blue-800 space-y-1">
+                                        <li>• The curve shows the probability this patient will survive over time</li>
+                                        <li>• Higher curves = better prognosis</li>
+                                        <li>• This is a <strong>prediction</strong>, not a guarantee - individual outcomes vary</li>
+                                        <li>• Based on 2,851 patients from TCGA and METABRIC cohorts</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- C-index Tab -->
+            <div id="content-cindex" class="tab-content hidden">
+                <div class="space-y-6">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">Understanding C-index (Concordance Index)</h3>
+                    
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-indigo-200">
+                        <p class="text-lg font-semibold text-indigo-900 mb-3">
+                            C-index = 0.72 means the model correctly ranks patient risk 72% of the time
+                        </p>
+                        <p class="text-gray-700">
+                            This is like asking: "If I give the model two random patients, can it correctly predict which one has higher risk?" 
+                            Our model gets it right 72 out of 100 times.
+                        </p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-green-50 p-6 rounded-xl border-2 border-green-200">
+                            <h4 class="font-bold text-green-900 mb-3 flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Example: Correct Ranking
+                            </h4>
+                            <div class="space-y-3">
+                                <div class="bg-white p-4 rounded-lg">
+                                    <p class="font-semibold text-sm text-gray-700">Patient A: Age 75, Stage 4</p>
+                                    <p class="text-green-700 font-bold">Model predicts: HIGH RISK ✓</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-lg">
+                                    <p class="font-semibold text-sm text-gray-700">Patient B: Age 35, Stage 1</p>
+                                    <p class="text-green-700 font-bold">Model predicts: LOW RISK ✓</p>
+                                </div>
+                                <p class="text-sm text-green-800 font-semibold">✓ Correctly ranked! Patient A has higher risk.</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-red-50 p-6 rounded-xl border-2 border-red-200">
+                            <h4 class="font-bold text-red-900 mb-3">What does 0.72 mean?</h4>
+                            <div class="space-y-3 text-gray-700">
+                                <p><strong>0.5 = Random guessing</strong> (coin flip)</p>
+                                <p><strong>0.7-0.8 = Good model</strong> (our model is here!)</p>
+                                <p><strong>0.8-0.9 = Excellent model</strong></p>
+                                <p><strong>1.0 = Perfect ranking</strong> (impossible in practice)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-50 p-6 rounded-xl border border-yellow-200">
+                        <h4 class="font-semibold text-yellow-900 mb-3">Why is C-index important?</h4>
+                        <ul class="space-y-2 text-gray-700">
+                            <li>• It measures how well the model <strong>ranks patients by risk</strong>, not just predicts exact survival times</li>
+                            <li>• More robust than other metrics for survival data with censoring (patients lost to follow-up)</li>
+                            <li>• Clinical utility: helps identify which patients need more aggressive treatment</li>
+                            <li>• Standard metric in survival analysis research</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Tab -->
+            <div id="content-model" class="tab-content hidden">
+                <div class="space-y-6">
+                    <h3 class="text-2xl font-bold text-gray-800 mb-4">How Random Survival Forest Works</h3>
+                    
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200">
+                        <h4 class="font-bold text-purple-900 mb-3 text-xl">The Model</h4>
+                        <p class="text-gray-700 mb-3">
+                            A <strong>Random Survival Forest</strong> is an ensemble of 200 decision trees that work together to predict survival outcomes.
+                            It's specifically designed for time-to-event data (survival analysis) rather than simple classification.
+                        </p>
+                        <div class="grid md:grid-cols-3 gap-4 mt-4">
+                            <div class="bg-white p-4 rounded-lg">
+                                <p class="font-bold text-purple-900">200 Trees</p>
+                                <p class="text-sm text-gray-600">Each tree votes on the prediction</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg">
+                                <p class="font-bold text-purple-900">Max Depth: 5</p>
+                                <p class="text-sm text-gray-600">Prevents overfitting</p>
+                            </div>
+                            <div class="bg-white p-4 rounded-lg">
+                                <p class="font-bold text-purple-900">43 Features</p>
+                                <p class="text-sm text-gray-600">Clinical + Pathway biology</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                            <h4 class="font-bold text-blue-900 mb-3">📥 Input Features</h4>
+                            <div class="space-y-2 text-sm text-gray-700">
+                                <p><strong>Clinical (19 features):</strong></p>
+                                <ul class="ml-4 space-y-1">
+                                    <li>• Age, stage, grade, tumor size</li>
+                                    <li>• Lymph nodes, biomarkers (ER/PR/HER2)</li>
+                                    <li>• Treatment history (chemo, hormone, radiation)</li>
+                                </ul>
+                                <p class="mt-3"><strong>Molecular (23 pathway scores):</strong></p>
+                                <ul class="ml-4 space-y-1">
+                                    <li>• Estrogen Response, E2F Targets, G2-M Checkpoint</li>
+                                    <li>• Glycolysis, Hypoxia, DNA Repair</li>
+                                    <li>• Inflammatory Response, Apoptosis</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="bg-green-50 p-6 rounded-xl border border-green-200">
+                            <h4 class="font-bold text-green-900 mb-3">📤 Model Outputs</h4>
+                            <div class="space-y-3 text-sm text-gray-700">
+                                <div class="bg-white p-3 rounded-lg">
+                                    <p class="font-semibold text-green-900">1. Risk Score</p>
+                                    <p>Numerical value (171-898 range)</p>
+                                    <p class="text-xs text-gray-500">Higher = worse prognosis</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg">
+                                    <p class="font-semibold text-green-900">2. Risk Category</p>
+                                    <p>Low / Intermediate / High</p>
+                                    <p class="text-xs text-gray-500">Based on risk score thresholds</p>
+                                </div>
+                                <div class="bg-white p-3 rounded-lg">
+                                    <p class="font-semibold text-green-900">3. Survival Curve</p>
+                                    <p>Probability over time (1, 3, 5, 10 years)</p>
+                                    <p class="text-xs text-gray-500">Shows expected survival trajectory</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-50 p-6 rounded-xl border border-indigo-200">
+                        <h4 class="font-bold text-indigo-900 mb-3">🎯 Top 5 Most Important Features</h4>
+                        <div class="space-y-3">
+                            <div class="bg-white p-3 rounded-lg flex items-center justify-between">
+                                <span class="font-semibold text-gray-700">1. Age</span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-32 bg-gray-200 rounded-full h-3">
+                                        <div class="bg-indigo-600 h-3 rounded-full" style="width: 68%"></div>
+                                    </div>
+                                    <span class="text-sm font-bold text-indigo-700">0.068</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg flex items-center justify-between">
+                                <span class="font-semibold text-gray-700">2. Tumor Size</span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-32 bg-gray-200 rounded-full h-3">
+                                        <div class="bg-indigo-600 h-3 rounded-full" style="width: 29%"></div>
+                                    </div>
+                                    <span class="text-sm font-bold text-indigo-700">0.029</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg flex items-center justify-between">
+                                <span class="font-semibold text-gray-700">3. Stage</span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-32 bg-gray-200 rounded-full h-3">
+                                        <div class="bg-indigo-600 h-3 rounded-full" style="width: 19%"></div>
+                                    </div>
+                                    <span class="text-sm font-bold text-indigo-700">0.019</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg flex items-center justify-between">
+                                <span class="font-semibold text-gray-700">4. Lymph Nodes</span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-32 bg-gray-200 rounded-full h-3">
+                                        <div class="bg-indigo-600 h-3 rounded-full" style="width: 17%"></div>
+                                    </div>
+                                    <span class="text-sm font-bold text-indigo-700">0.017</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-3 rounded-lg flex items-center justify-between">
+                                <span class="font-semibold text-gray-700">5. E2F Targets</span>
+                                <div class="flex items-center gap-3">
+                                    <div class="w-32 bg-gray-200 rounded-full h-3">
+                                        <div class="bg-indigo-600 h-3 rounded-full" style="width: 14%"></div>
+                                    </div>
+                                    <span class="text-sm font-bold text-indigo-700">0.014</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-4">
+                            Age dominates as the strongest predictor, followed by clinical features and pathway biology.
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-100 p-6 rounded-xl">
+                        <h4 class="font-bold text-gray-900 mb-3">📊 Training Data</h4>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-2">Cohorts:</p>
+                                <ul class="text-sm text-gray-700 space-y-1">
+                                    <li>• TCGA-BRCA: 1,095 patients (RNA-seq)</li>
+                                    <li>• METABRIC: 1,980 patients (microarray)</li>
+                                    <li>• <strong>Total: 2,851 patients</strong> (after QC)</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600 mb-2">Splits:</p>
+                                <ul class="text-sm text-gray-700 space-y-1">
+                                    <li>• Training: 1,995 patients (70%)</li>
+                                    <li>• Validation: 428 patients (15%)</li>
+                                    <li>• Test: 428 patients (15%)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-6 bg-white rounded-2xl shadow-lg p-6">
+            <div class="text-center text-sm text-gray-600">
+                <p class="font-semibold mb-2">TCGA-METABRIC Treatment AI Project</p>
+                <p>Multi-cohort breast cancer survival prediction using Random Survival Forest</p>
+                <p class="mt-2 text-xs">
+                    This is a demonstration based on a trained model with real predictions. For educational purposes.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let predictions = [];
+        let currentPrediction = null;
+        let chart = null;
+        let state = {
+            age: 55,
+            stage: 2,
+            erStatus: 'positive',
+            pam50: 'LumA'
+        };
+
+        // Load predictions
+        async function loadPredictions() {
+            try {
+                const response = await fetch('demo_predictions.json');
+                predictions = await response.json();
+                console.log('Loaded', predictions.length, 'predictions');
+                updatePrediction();
+            } catch (error) {
+                console.error('Error loading predictions:', error);
+                alert('Could not load prediction data. Make sure demo_predictions.json is in the same folder.');
+            }
+        }
+
+        // Find matching prediction
+        function findPrediction() {
+            const match = predictions.find(p => 
+                p.age === state.age && 
+                p.stage === state.stage && 
+                p.er_status === state.erStatus && 
+                p.pam50_subtype === state.pam50
+            );
+
+            if (match) return match;
+
+            // Find closest age match
+            const filtered = predictions.filter(p => 
+                p.stage === state.stage && 
+                p.er_status === state.erStatus && 
+                p.pam50_subtype === state.pam50
+            );
+
+            if (filtered.length === 0) return predictions[0];
+
+            return filtered.reduce((prev, curr) => 
+                Math.abs(curr.age - state.age) < Math.abs(prev.age - state.age) ? curr : prev
+            );
+        }
+
+        // Update prediction
+        function updatePrediction() {
+            currentPrediction = findPrediction();
+            if (!currentPrediction) return;
+
+            // Update risk display
+            const riskScore = Math.round(currentPrediction.risk_score);
+            const riskCat = currentPrediction.risk_category;
+            
+            document.getElementById('risk-score').textContent = riskScore;
+            document.getElementById('risk-category').textContent = riskCat + ' Risk';
+
+            // Update risk display colors
+            const riskDisplay = document.getElementById('risk-display');
+            riskDisplay.className = 'p-6 rounded-xl border-2 ';
+            if (riskCat === 'Low') {
+                riskDisplay.className += 'bg-green-50 border-green-200 text-green-600';
+            } else if (riskCat === 'Intermediate') {
+                riskDisplay.className += 'bg-yellow-50 border-yellow-200 text-yellow-600';
+            } else {
+                riskDisplay.className += 'bg-red-50 border-red-200 text-red-600';
+            }
+
+            // Update survival percentages
+            document.getElementById('surv-1y').textContent = (currentPrediction.survival['1y'] * 100).toFixed(1) + '%';
+            document.getElementById('surv-3y').textContent = (currentPrediction.survival['3y'] * 100).toFixed(1) + '%';
+            document.getElementById('surv-5y').textContent = (currentPrediction.survival['5y'] * 100).toFixed(1) + '%';
+            document.getElementById('surv-10y').textContent = (currentPrediction.survival['10y'] * 100).toFixed(1) + '%';
+
+            // Update chart
+            updateChart();
+        }
+
+        // Update chart
+        function updateChart() {
+            if (!currentPrediction) return;
+
+            const data = [
+                { year: 0, survival: 100 },
+                { year: 1, survival: currentPrediction.survival['1y'] * 100 },
+                { year: 3, survival: currentPrediction.survival['3y'] * 100 },
+                { year: 5, survival: currentPrediction.survival['5y'] * 100 },
+                { year: 10, survival: currentPrediction.survival['10y'] * 100 }
+            ];
+
+            if (chart) {
+                chart.data.datasets[0].data = data.map(d => d.survival);
+                chart.update();
+            } else {
+                const ctx = document.getElementById('survivalChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['0', '1', '3', '5', '10'],
+                        datasets: [{
+                            label: 'Survival Probability (%)',
+                            data: data.map(d => d.survival),
+                            borderColor: '#4f46e5',
+                            backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 5,
+                            pointBackgroundColor: '#4f46e5'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.parsed.y.toFixed(1) + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: 'Survival Probability (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Years'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all content
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-button').forEach(el => {
+                el.classList.remove('active');
+                el.classList.add('text-gray-600');
+            });
+
+            // Show selected content
+            document.getElementById('content-' + tabName).classList.remove('hidden');
+            const btn = document.getElementById('tab-' + tabName);
+            btn.classList.add('active');
+            btn.classList.remove('text-gray-600');
+        }
+
+        // ER status setter
+        function setER(status) {
+            state.erStatus = status;
+            document.querySelectorAll('.er-btn').forEach(btn => {
+                btn.className = 'er-btn py-3 px-4 rounded-lg font-semibold transition-all bg-gray-100 text-gray-700 hover:bg-gray-200';
+            });
+            document.getElementById('er-' + status).className = 'er-btn py-3 px-4 rounded-lg font-semibold transition-all bg-indigo-600 text-white shadow-lg';
+            updatePrediction();
+        }
+
+        // Event listeners
+        document.getElementById('age-slider').addEventListener('input', (e) => {
+            state.age = parseInt(e.target.value);
+            document.getElementById('age-value').textContent = state.age;
+            updatePrediction();
+        });
+
+        document.getElementById('stage-slider').addEventListener('input', (e) => {
+            state.stage = parseInt(e.target.value);
+            document.getElementById('stage-value').textContent = 'Stage ' + state.stage;
+            updatePrediction();
+        });
+
+        document.getElementById('pam50-select').addEventListener('change', (e) => {
+            state.pam50 = e.target.value;
+            updatePrediction();
+        });
+
+        // Initialize
+        loadPredictions();
+    </script>
+</body>
+</html>
